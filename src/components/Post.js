@@ -1,4 +1,4 @@
-import React from 'react'
+import React, {useReducer, useEffect} from 'react'
 import PropTypes from 'prop-types'
 import queryString from 'query-string'
 import { getItem } from '../utils/api'
@@ -55,15 +55,37 @@ function CommentsList ({comments}){
 
 }
 
+function postReducer (state, action) {
+  if(action.type === 'success') {
+    return {
+      ...state,
+      title: action.title,
+      username: action.username,
+      time: action.time,
+      numComments: action.numComments,
+      comments: action.comments,
+      href: action.href,
+      id: action.id,
+      loading: false
+
+    }
+  }else if(action.type === 'error'){
+    return {
+      ...state,
+
+    }
+  }else{
+    throw new Error ('The action type is not supported')
+  }
+}
 
 
 
-export default class Post extends React.Component{
-  
-  constructor(props){
-    super(props)
-
-    this.state = {
+export default function Post({location}) {
+  const {id} = queryString.parse(location.search)
+  const [state, dispatch] = useReducer(
+    postReducer,
+    {
       title: null,
       username: null,
       time: null,
@@ -73,72 +95,75 @@ export default class Post extends React.Component{
       id: null,
       loading: true
     }
-  }
+  )
+  useEffect(() =>{
 
+    getItem(id)
+    .then(post => {
+      console.log(post)
+      const {by, descendants, kids, time, title, url, id} = post
 
-  componentDidMount(){
-    const post = queryString.parse(this.props.location.search).id
-    this.setState({postId:post})
-
-    
-
-    getItem(post)
-      .then(post => {
-        let {by, descendants, kids, time, title, url, id} = post
-
-        this.setState({
+      if(!kids){
+        dispatch({
+          type: 'success',
           title: title,
           username: by,
           time: time,
           numComments: descendants,
+          comments: [],
           href: url,
-          id:id
-        })
-        if(!kids) kids = []
-        //turn descendants(comment number) into comments
+          id: id,
+          loading: false
+         })
+      }else{
         Promise.all(kids.map(getItem))
           .then(comments => {
-            this.setState({
-              comments:comments,
-              loading: false
-            })
+           dispatch({
+            type: 'success',
+            title: title,
+            username: by,
+            time: time,
+            numComments: descendants,
+            comments: comments,
+            href: url,
+            id: id,
+            loading: false
+           })
           })
+      }
+      
 
 
-      })
-  }
+    })
 
-  render(){
-    
-    const {title, username, time, numComments, href, id, comments,loading} = this.state
-   
+  })
 
-    return(
-      <React.Fragment>
-        {loading && <Loading/>}
-        {!loading &&
-          <div className = 'comment-posts'>
-            <div className='commentPG-title'>
-              {/* Post title */}
-              <Item 
-                key={href}
-                title={title}
-                username={username}
-                time={time}
-                comments={numComments}
-                href={href}
-                postID={id}
-              />
-            </div>
-            {/* Comments */}
-            {comments && <CommentsList comments={comments}/>}
+  return(
+    <React.Fragment>
+      {state.loading && <Loading/>}
+      {!state.loading &&
+        <div className = 'comment-posts'>
+          <div className='commentPG-title'>
+            {/* Post title */}
+            <Item 
+              key={state.href}
+              title={state.title}
+              username={state.username}
+              time={state.time}
+              comments={state.numComments}
+              href={state.href}
+              postID={state.id}
+            />
           </div>
-        }
-      </React.Fragment>
-    
+          {/* Comments */}
+          {state.comments && <CommentsList comments={state.comments}/>}
+        </div>
+      }
+    </React.Fragment>
+  )
 
-  
 
-    )
-  }
+
+
 }
+

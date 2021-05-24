@@ -1,18 +1,16 @@
-import React from 'react'
-import { getStories } from '../utils/api'
-import PropTypes from 'prop-types'
-import Item from './StoryItem'
-import Loading from './Loading'
+import React, { useReducer, useState, useEffect } from 'react';
+import { getStories } from '../utils/api';
+import PropTypes from 'prop-types';
+import Item from './StoryItem';
+import Loading from './Loading';
 
+export function StoryList({ stories }) {
+  return (
+    <ul className="posts">
+      {stories.map((story) => {
+        const { by, descendants, time, title, url, id } = story;
 
-export function StoryList ({ stories }) {
-
-  return(
-    <ul className = 'posts'>
-    {stories.map((story) =>{
-      const {by, descendants, time, title, url, id} = story
-      
-      return(
+        return (
           <Item
             key={url}
             title={title}
@@ -22,76 +20,58 @@ export function StoryList ({ stories }) {
             href={url}
             postID={id}
           />
-      )
-    })}
-  </ul>
- 
- 
-  )
-}
- 
-StoryList.propTypes ={
-  stories: PropTypes.array.isRequired
+        );
+      })}
+    </ul>
+  );
 }
 
+StoryList.propTypes = {
+  stories: PropTypes.array.isRequired,
+};
 
-export default class Stories extends React.Component{
-  constructor(props){
-    super(props)
-
-    this.state = {
-      selectedCategory: 'Top',
-      stories:{},
-      loading: true
-    }
-
-    this.updateCategory = this.updateCategory.bind(this)
+function storiesReducer(state, action) {
+  if (action.type === 'success') {
+    return {
+      ...state,
+      stories: action.stories,
+      loading: action.loading,
+    };
+  } else if (action.type === 'error') {
+    return {
+      ...state,
+    };
+  } else {
+    throw new Error('The action type is not supported');
   }
-  componentDidMount(){
-    const selection = this.props.location.pathname ==='/' ? 'Top' : 'New'
-    this.updateCategory(selection)
-  }
+}
 
-  //pass this to nav as an onclick function on the buttons
-  updateCategory (selection) {
-    this.setState({
-      selectedCategory:selection
-    })
-    //fetch stories using api
- 
-      getStories(selection)
-        .then(res => Promise.all(res))
-        .then(data => {
-          this.setState(({stories}) => ({
-            stories:{
-              ...stories,
-              [selection]: data
-            },
-            loading: false
-          }))
-        })
-        .catch(error => {
-          console.warn("Error fetching stories", error)
+export default function Stories({ location }) {
+  const selection = location.pathname === '/' ? 'Top' : 'New';
 
-          this.setState({
-            error:'there was an error fetching stories'
-          })
-        }) 
-       
-  }
+  const [state, dispatch] = useReducer(storiesReducer, {
+    stories: null,
+    loading: true,
+  });
 
-  //loading screen
+  useEffect(() => {
+    getStories(selection)
+      .then((res) => Promise.all(res))
+      .then((data) => {
+        console.log(data);
+        dispatch({
+          type: 'success',
+          stories: data,
+          loading: false,
+        });
+      });
+  }, [selection]);
 
-  render() {
-    const {selectedCategory, stories, error } = this.state
-
-    return (
-      <React.Fragment>
-        {this.state.loading && <Loading/>}
-        {/* need to check if stories exist bc of async */}
-        {stories[selectedCategory] && <StoryList stories = {stories[selectedCategory]}/>}
-        
-      </React.Fragment>
-    )
-  }
+  return (
+    <React.Fragment>
+      {state.loading && <Loading />}
+      {/* need to check if stories exist bc of async */}
+      {state.stories && <StoryList stories={state.stories} />}
+    </React.Fragment>
+  );
 }

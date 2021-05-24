@@ -1,11 +1,11 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { ThemeConsumer } from '../context/theme'
+import ThemeContext from '../context/theme'
 import { Link } from 'react-router-dom'
 
 
 export default function Item ({title, username, time, comments, href, postID}){
-
+  const theme = React.useContext(ThemeContext)
   if(!comments)comments = 0
 
 
@@ -17,44 +17,40 @@ export default function Item ({title, username, time, comments, href, postID}){
  
 
   return (
+    <li className ='post' >
+        <a className = {`link-${theme}`} href={`${href}`}>{title}</a>
+        {/* Post meta info */}
+        <div className ={`meta-info-${theme}`}>
+          
+          <span>by <Link
+            to={{
+              pathname:'/user',
+              search: `?id=${username}`
+            }}
+          >
+          
+          <button className="btn-clear">{username}</button>
+          </Link>
+          
+          </span>
+          <span> {date} with  </span>
+          <span>
+          <Link
+            to={{
+              pathname:'/post',
+              search: `?id=${postID}`
+            }}
+          >
+          
+          <button className="username btn-clear">{comments} </button>
+          </Link>
+          &nbsp;comments
+          </span>
 
-    <ThemeConsumer>
-      {({theme, toggleTheme}) => (
-      <li className ='post' >
-          <a className = {`link-${theme}`} href={`${href}`}>{title}</a>
-          {/* Post meta info */}
-          <div className ={`meta-info-${theme}`}>
-            
-            <span>by <Link
-              to={{
-                pathname:'/user',
-                search: `?id=${username}`
-              }}
-            >
-            
-            <button className="btn-clear">{username}</button>
-            </Link>
-            
-            </span>
-            <span> {date} with  </span>
-            <span>
-            <Link
-              to={{
-                pathname:'/post',
-                search: `?id=${postID}`
-              }}
-            >
-            
-            <button className="username btn-clear">{comments} </button>
-            </Link>
-            &nbsp;comments
-            </span>
+        </div>
 
-          </div>
-
-      </li>
-      )}
-    </ThemeConsumer>
+    </li>
+   
   )
 }
 
